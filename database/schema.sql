@@ -171,6 +171,18 @@ VALUES
 -- SECURITY POLICIES (Row Level Security)
 -- =========================================================
 
+-- Helper function to check if user is admin (prevents recursion)
+CREATE OR REPLACE FUNCTION is_admin() 
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT role = 'admin' 
+    FROM profiles 
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
@@ -181,16 +193,16 @@ ALTER TABLE workshop_accessories ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles: Users can see only their profile. Admins can see all.
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (is_admin());
 
 -- 2. Quotes: Users can view own. Admins can view all and update.
 CREATE POLICY "Users can view own quotes" ON quotes FOR SELECT USING (EXISTS (SELECT 1 FROM vehicles WHERE vehicles.id = quotes.vehicle_id AND vehicles.owner_id = auth.uid()));
-CREATE POLICY "Admins can manage all quotes" ON quotes FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can manage all quotes" ON quotes FOR ALL USING (is_admin());
 
 -- 3. Settings: Public can read (for map/payments). Only Admin can update.
 CREATE POLICY "Anyone can read workshop settings" ON workshop_settings FOR SELECT USING (true);
-CREATE POLICY "Admins can update workshop settings" ON workshop_settings FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins can update workshop settings" ON workshop_settings FOR UPDATE USING (is_admin());
 
 -- 4. Store: Public can view active stock. Only admin manages.
 CREATE POLICY "Public can view accessories" ON workshop_accessories FOR SELECT USING (is_active = true AND stock_quantity > 0);
-CREATE POLICY "Admins manage accessories" ON workshop_accessories FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admins manage accessories" ON workshop_accessories FOR ALL USING (is_admin());

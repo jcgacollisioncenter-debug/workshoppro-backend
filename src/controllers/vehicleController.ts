@@ -1,7 +1,26 @@
 import { Request, Response } from 'express';
 import { decodeVIN } from '../services/nhtsaService';
-import { analyzeVehicleDamage } from '../services/aiService';
+import { analyzeVehicleDamage, extractVinFromImage } from '../services/aiService';
 import { calculateRepairEstimate } from '../services/budgetService';
+
+export const ocrVin = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+    
+    const vin = await extractVinFromImage(req.file.buffer, req.file.mimetype);
+    
+    if (vin === 'NOT_FOUND' || vin.length !== 17) {
+      return res.status(422).json({ error: 'VIN_NOT_DETECTED', message: 'Could not clearly read a 17-character VIN from this photo.' });
+    }
+
+    res.json({ vin });
+  } catch (error) {
+    console.error('OCR Controller error:', error);
+    res.status(500).json({ error: 'OCR failed' });
+  }
+};
 
 export const getVehicleByVIN = async (req: Request, res: Response) => {
   const { vin } = req.params;

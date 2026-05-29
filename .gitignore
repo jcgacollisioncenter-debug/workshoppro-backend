@@ -1,7 +1,6 @@
+target/
+dist/
 node_modules/
 .env
-dist/
-build/
-*.log
 .DS_Store
-C:\Users\Daniel\.gemini\tmp\workshop\
+*.log

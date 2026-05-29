@@ -39,6 +39,7 @@ export const generateAPIKey = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true, apiKey: data });
   } catch (error) {
+    console.error('generateAPIKey error:', error);
     res.status(500).json({ error: 'Failed to generate API key' });
   }
 };
@@ -53,6 +54,7 @@ export const listAPIKeys = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json(data);
   } catch (error) {
+    console.error('listAPIKeys error:', error);
     res.status(500).json({ error: 'Failed to list API keys' });
   }
 };
@@ -68,6 +70,7 @@ export const revokeAPIKey = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
+    console.error('revokeAPIKey error:', error);
     res.status(500).json({ error: 'Failed to revoke API key' });
   }
 };
@@ -99,6 +102,7 @@ export const getAccessories = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json(data);
   } catch (error) {
+    console.error('getAccessories error:', error);
     res.status(500).json({ error: 'Failed to fetch accessories' });
   }
 };
@@ -126,6 +130,7 @@ export const getCompatibleAccessories = async (req: Request, res: Response) => {
 
     res.json(filtered);
   } catch (error) {
+    console.error('getCompatibleAccessories error:', error);
     res.status(500).json({ error: 'Failed to fetch compatible accessories' });
   }
 };
@@ -142,6 +147,7 @@ export const addAccessory = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true, accessory: data });
   } catch (error) {
+    console.error('addAccessory error:', error);
     res.status(500).json({ error: 'Failed to add accessory' });
   }
 };
@@ -160,6 +166,7 @@ export const updateAccessory = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true, accessory: data });
   } catch (error) {
+    console.error('updateAccessory error:', error);
     res.status(500).json({ error: 'Failed to update accessory' });
   }
 };
@@ -175,6 +182,7 @@ export const deleteAccessory = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
+    console.error('deleteAccessory error:', error);
     res.status(500).json({ error: 'Failed to delete accessory' });
   }
 };
@@ -189,6 +197,7 @@ export const linkAccessoryToQuote = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
+    console.error('linkAccessoryToQuote error:', error);
     res.status(500).json({ error: 'Failed to link accessory' });
   }
 };
@@ -205,6 +214,7 @@ export const getWorkshopSettings = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json(data);
   } catch (error) {
+    console.error('getWorkshopSettings error:', error);
     res.status(500).json({ error: 'Failed to fetch workshop settings' });
   }
 };
@@ -228,6 +238,7 @@ export const updateWorkshopSettings = async (req: Request, res: Response) => {
     if (error) throw error;
     res.json({ success: true, settings: data });
   } catch (error) {
+    console.error('updateWorkshopSettings error:', error);
     res.status(500).json({ error: 'Failed to update workshop settings' });
   }
 };

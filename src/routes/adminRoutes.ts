@@ -11,10 +11,18 @@ import {
   addAccessory,
   updateAccessory,
   deleteAccessory,
-  linkAccessoryToQuote
+  linkAccessoryToQuote,
+  getWorkshopSettings,
+  updateWorkshopSettings
 } from '../controllers/adminController';
 
 const router = Router();
+
+// Middleware de depuración para ver qué ruta se está pidiendo
+router.use((req, res, next) => {
+  console.log(`[Admin Route] ${req.method} ${req.url}`);
+  next();
+});
 
 router.get('/parts', getParts);
 router.get('/suppliers', getSuppliers);

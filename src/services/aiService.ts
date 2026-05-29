@@ -36,6 +36,40 @@ FORMAT:
 Assessment: [Your technical assessment here]`;
 };
 
+export const extractVinFromImage = async (imageBuffer: Buffer, mimeType: string) => {
+  try {
+    const model = genAI.getGenerativeModel({ model: geminiModel });
+    
+    const prompt = `You are a high-precision OCR engine specializing in automotive VINs.
+      Find the 17-character Vehicle Identification Number (VIN) in the image.
+      It is often found on the dashboard (visible through the windshield), the door jamb sticker, or registration documents.
+      
+      Return ONLY the 17-character VIN string. No extra text, no spaces, no dashes.
+      If no VIN is clearly visible, return "NOT_FOUND".`;
+    
+    const imagePart = {
+      inlineData: {
+        data: imageBuffer.toString('base64'),
+        mimeType
+      },
+    };
+
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    let vin = response.text().trim().replace(/[^A-Z0-9]/g, '');
+    
+    if (vin.length !== 17) {
+      // Try again or return error if not 17 chars
+      return vin.includes("NOTFOUND") ? "NOT_FOUND" : "NOT_FOUND";
+    }
+    
+    return vin;
+  } catch (error) {
+    console.error('Error in VIN OCR:', error);
+    throw new Error('VIN OCR failed');
+  }
+};
+
 export const analyzeVehicleDamage = async (imageBuffer: Buffer, mimeType: string, zones: string[], vehicleSpecs?: any) => {
   try {
     const model = genAI.getGenerativeModel({ model: geminiModel });
