@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getVehicleByVIN, analyzeDamage } from '../controllers/vehicleController';
+import { getVehicleByVIN, analyzeDamage, ocrVin } from '../controllers/vehicleController';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
