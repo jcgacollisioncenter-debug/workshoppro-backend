@@ -13,7 +13,10 @@ import {
   deleteAccessory,
   linkAccessoryToQuote,
   getWorkshopSettings,
-  updateWorkshopSettings
+  updateWorkshopSettings,
+  getRepairPlans,
+  createRepairPlan,
+  updateRepairPlan
 } from '../controllers/adminController';
 
 const router = Router();
@@ -44,5 +47,10 @@ router.post('/quotes/link-accessory', linkAccessoryToQuote);
 // Workshop Settings
 router.get('/settings', getWorkshopSettings);
 router.patch('/settings', updateWorkshopSettings);
+
+// Repair Plans
+router.get('/repair-plans', getRepairPlans);
+router.post('/repair-plans', createRepairPlan);
+router.patch('/repair-plans/:id', updateRepairPlan);
 
 export default router;

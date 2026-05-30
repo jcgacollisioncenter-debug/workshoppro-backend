@@ -43,7 +43,13 @@ CREATE TABLE appointments (
     service_type TEXT NOT NULL,
     scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
     status TEXT CHECK (status IN ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')) DEFAULT 'pending',
-    notes TEXT,
+    
+    -- Client Contact Info (Requested for fluid booking)
+    client_name TEXT,
+    client_phone TEXT,
+    client_notes TEXT,
+    
+    notes TEXT, -- Original internal notes
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -129,6 +135,10 @@ CREATE TABLE workshop_settings (
     longitude DECIMAL(11, 8),
     address TEXT,
     
+    -- Contact & Web (New)
+    phone_number TEXT,
+    website_url TEXT,
+    
     -- AI Autopilot Progress Configuration
     autopilot_enabled BOOLEAN DEFAULT false,
     autopilot_trust_limit DECIMAL(10, 2) DEFAULT 2500.00,
@@ -152,6 +162,73 @@ CREATE TABLE estimate_calibration_factors (
     paint_factor DECIMAL(5, 3) DEFAULT 1.000,
     sample_size INTEGER DEFAULT 0,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. REPAIR PLANS (The tracking system)
+CREATE TABLE repair_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    appointment_id UUID REFERENCES appointments(id) ON DELETE CASCADE,
+    quote_id UUID REFERENCES quotes(id) ON DELETE SET NULL,
+    vehicle_id UUID REFERENCES vehicles(id),
+    
+    -- Process Steps (Combined Workshop & Professional Standards)
+    step_inspection INTEGER DEFAULT 0,
+    step_inspection_started_at TIMESTAMP WITH TIME ZONE,
+    step_inspection_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_disassembly INTEGER DEFAULT 0,
+    step_disassembly_started_at TIMESTAMP WITH TIME ZONE,
+    step_disassembly_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_bodywork INTEGER DEFAULT 0,
+    step_bodywork_started_at TIMESTAMP WITH TIME ZONE,
+    step_bodywork_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_prep INTEGER DEFAULT 0,
+    step_prep_started_at TIMESTAMP WITH TIME ZONE,
+    step_prep_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_paint INTEGER DEFAULT 0,
+    step_paint_started_at TIMESTAMP WITH TIME ZONE,
+    step_paint_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_reassembly INTEGER DEFAULT 0,
+    step_reassembly_started_at TIMESTAMP WITH TIME ZONE,
+    step_reassembly_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_detailing INTEGER DEFAULT 0,
+    step_detailing_started_at TIMESTAMP WITH TIME ZONE,
+    step_detailing_completed_at TIMESTAMP WITH TIME ZONE,
+
+    step_ready INTEGER DEFAULT 0,
+    step_ready_started_at TIMESTAMP WITH TIME ZONE,
+    step_ready_completed_at TIMESTAMP WITH TIME ZONE,
+    
+    current_step TEXT DEFAULT 'Inspection',
+    progress_percentage INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. REPAIR ANALYTICS (The Time-Learning Memory)
+CREATE TABLE repair_analytics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vehicle_make TEXT,
+    vehicle_model TEXT,
+    vehicle_year INTEGER,
+    zones_affected_count INTEGER,
+    severity_proxy DECIMAL(10, 2), -- Quote total amount
+    
+    -- Real durations in seconds
+    duration_inspection INTEGER,
+    duration_disassembly INTEGER,
+    duration_bodywork INTEGER,
+    duration_prep INTEGER,
+    duration_paint INTEGER,
+    duration_reassembly INTEGER,
+    duration_detailing INTEGER,
+    duration_ready INTEGER,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =========================================================
@@ -190,6 +267,7 @@ ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workshop_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workshop_accessories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repair_plans ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles: Users can see only their profile. Admins can see all.
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -206,3 +284,7 @@ CREATE POLICY "Admins can update workshop settings" ON workshop_settings FOR UPD
 -- 4. Store: Public can view active stock. Only admin manages.
 CREATE POLICY "Public can view accessories" ON workshop_accessories FOR SELECT USING (is_active = true AND stock_quantity > 0);
 CREATE POLICY "Admins manage accessories" ON workshop_accessories FOR ALL USING (is_admin());
+
+-- 5. Repair Plans: Public can view their own. Admins manage all.
+CREATE POLICY "Users can view own repair plans" ON repair_plans FOR SELECT USING (EXISTS (SELECT 1 FROM vehicles WHERE vehicles.id = repair_plans.vehicle_id AND vehicles.owner_id = auth.uid()));
+CREATE POLICY "Admins manage all repair plans" ON repair_plans FOR ALL USING (is_admin());

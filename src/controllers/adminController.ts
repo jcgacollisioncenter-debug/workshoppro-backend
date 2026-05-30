@@ -242,3 +242,128 @@ export const updateWorkshopSettings = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update workshop settings' });
   }
 };
+
+// Repair Plan Management
+export const getRepairPlans = async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await (supabase as any)
+      .from('repair_plans')
+      .select('*, vehicle:vehicles(*), appointment:appointments(*)')
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('getRepairPlans error:', error);
+    res.status(500).json({ error: 'Failed to fetch repair plans' });
+  }
+};
+
+export const createRepairPlan = async (req: Request, res: Response) => {
+  try {
+    const plan = req.body;
+    const { data, error } = await (supabase as any)
+      .from('repair_plans')
+      .insert(plan)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, plan: data });
+  } catch (error) {
+    console.error('createRepairPlan error:', error);
+    res.status(500).json({ error: 'Failed to create repair plan' });
+  }
+};
+
+import { recordStageMetrics } from '../services/learningService';
+
+// ... (previous imports)
+
+export const updateRepairPlan = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Process Steps Logic
+    const stepKeys = [
+      'step_inspection',
+      'step_disassembly',
+      'step_bodywork',
+      'step_prep',
+      'step_paint',
+      'step_reassembly',
+      'step_detailing',
+      'step_ready'
+    ];
+
+    const { data: currentPlan } = await (supabase as any)
+      .from('repair_plans')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!currentPlan) return res.status(404).json({ error: 'Plan not found' });
+
+    // Handle Timestamps automatically based on status change
+    stepKeys.forEach(key => {
+      if (updates[key] !== undefined) {
+        const oldStatus = currentPlan[key];
+        const newStatus = updates[key];
+
+        // Transition 0 -> 1: Started
+        if (oldStatus === 0 && newStatus === 1) {
+          updates[`${key}_started_at`] = new Date().toISOString();
+        }
+        // Transition 1 -> 2: Completed
+        if (oldStatus === 1 && newStatus === 2) {
+          updates[`${key}_completed_at`] = new Date().toISOString();
+        }
+      }
+    });
+
+    const state = { ...currentPlan, ...updates };
+    const steps = stepKeys.map(key => state[key] || 0);
+    
+    // Progress calculation
+    const completed = steps.filter(s => s === 2).length;
+    const inProgress = steps.filter(s => s === 1).length;
+    updates.progress_percentage = Math.round(((completed * 1) + (inProgress * 0.5)) / stepKeys.length * 100);
+    
+    // Current step label
+    const firstInProgressIndex = steps.indexOf(1);
+    const lastCompletedIndex = steps.lastIndexOf(2);
+    
+    if (firstInProgressIndex !== -1) {
+      updates.current_step = stepKeys[firstInProgressIndex].replace('step_', '').split('_')[0].charAt(0).toUpperCase() + stepKeys[firstInProgressIndex].split('_')[0].slice(1);
+    } else if (lastCompletedIndex !== -1) {
+      if (lastCompletedIndex === stepKeys.length - 1) {
+        updates.current_step = 'Ready for Pickup';
+      } else {
+        updates.current_step = 'Next: ' + stepKeys[lastCompletedIndex + 1].replace('step_', '').split('_')[0].charAt(0).toUpperCase() + stepKeys[lastCompletedIndex + 1].split('_')[0].slice(1);
+      }
+    }
+
+    const { data, error } = await (supabase as any)
+      .from('repair_plans')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Trigger AI Learning if any step was just completed
+    stepKeys.forEach(async (key) => {
+      if (updates[key] === 2 && currentPlan[key] === 1) {
+        const stageName = key.replace('step_', '');
+        await recordStageMetrics(id, stageName);
+      }
+    });
+
+    res.json({ success: true, plan: data });
+  } catch (error) {
+    console.error('updateRepairPlan error:', error);
+    res.status(500).json({ error: 'Failed to update repair plan' });
+  }
+};
